@@ -1,7 +1,6 @@
 # services/user_service.py
 from dao.user_dao import UserDAO
-# (Тут ми можемо імпортувати інші DAO, якщо потрібно,
-# наприклад, PlaylistDAO, щоб створити плейлист за замовчуванням)
+from domain.user import User # <-- Імпортуємо модель
 
 class UserService:
     """
@@ -21,24 +20,21 @@ class UserService:
         """
         Створює нового юзера з перевірками.
         """
-        # **Приклад бізнес-логіки**
         if self.user_dao.find_by_username(data['username']):
             raise ValueError(f"Юзер з ім'ям '{data['username']}' вже існує.")
         if self.user_dao.find_by_email(data['email']):
             raise ValueError(f"Юзер з email '{data['email']}' вже існує.")
             
-        # Тут має бути хешування пароля!
-        # data['password_hash'] = hash_password(data['password'])
-        # (поки що ми просто приймаємо 'password_hash' з 'data')
+        # (Тут має бути хешування пароля!)
 
-        return self.user_dao.create(data)
+        # Виправлення: Створюємо ОБ'ЄКТ User
+        new_user_obj = User(**data)
+        return self.user_dao.create(new_user_obj)
 
     def update_user(self, user_id: int, data: dict):
         """
         Оновлює юзера.
         """
-        # **Приклад бізнес-логіки**
-        # Не дозволяємо змінювати username або email на вже зайнятий
         if 'username' in data and self.user_dao.find_by_username(data['username']):
              raise ValueError(f"Юзер з ім'ям '{data['username']}' вже існує.")
         if 'email' in data and self.user_dao.find_by_email(data['email']):

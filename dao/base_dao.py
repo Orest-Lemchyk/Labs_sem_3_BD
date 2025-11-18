@@ -1,91 +1,79 @@
-from abc import ABC
-from typing import List
-
-
-class BaseDAO(ABC):
+# dao/base_dao.py
+class BaseDAO:
     """
-    The common realization of Data Access class.
+    Базовий DAO з основними CRUD-операціями.
+    Ця версія ПОВЕРТАЄ результати, щоб 'routes' могли 
+    коректно обробляти відповіді.
     """
-    _model = None
-    _session = None
+    _model = None # Потрібно перевизначити у дочірніх класах
 
-    def find_all(self) -> List[object]:
+    def __init__(self, session):
+        self._session = session
+
+    def find_by_id(self, id: int):
         """
-        Gets all objects from table.
-        :return: list of all objects
+        Знаходить об'єкт за його ID.
+        (Використовуємо .get() замість .query(), бо це швидше для PK)
+        """
+        return self._session.get(self._model, id)
+
+    def find_all(self):
+        """
+        Знаходить всі об'єкти.
         """
         return self._session.query(self._model).all()
 
-    def find_by_id(self, key: int) -> object:
+    def create(self, obj: object):
         """
-        Gets object from database table by integer key.
-        :param key: integer (PK)
-        :return: object
+        Створює новий об'єкт в БД.
+        (Ми очікуємо ОБ'ЄКТ, а не dict - це виправлено у services)
         """
-        return self._session.get(self._model, key)
-
-    def create(self, obj: object) -> object:
-        """
-        Creates obj in database table.
-        :param obj: object to create in database
-        :return: created obj
-        """
-        self._session.add(obj)
-        self._session.commit()
-        return obj
-
-    def create_all(self, obj_list: List[object]) -> List[object]:
-        """
-        Creates objects from object list.
-        :param obj_list: object list to create in database
-        :return: list of created object
-        """
-        self._session.add_all(obj_list)
-        self._session.commit()
-        return obj_list
-
-    def update(self, key: int, attrs: dict) -> None:
-        """
-        Updates object in database table.
-        :param key: integer (PK)
-        :param attrs: dict of attributes to update
-        """
-        obj = self._session.get(self._model, key)
-        if obj:
-            for attr_name, attr_value in attrs.items():
-                if hasattr(obj, attr_name):
-                    setattr(obj, attr_name, attr_value)
+        try:
+            self._session.add(obj)
             self._session.commit()
+            self._session.refresh(obj)
+            return obj
+        except Exception as e:
+            self._session.rollback()
+            print(f"Помилка при створенні об'єкта: {e}")
+            raise e 
 
-    def patch(self, key: int, field: str, value: object) -> None:
+    def update(self, id: int, data: dict):
         """
-        Modifies defined field of object in database table.
-        :param key: integer (PK)
-        :param field: field name of object
-        :param value: field value of object
+        Оновлює об'єкт за ID, використовуючи словник 'data'.
+        ПОВЕРТАЄ оновлений об'єкт або None.
         """
-        obj = self._session.get(self._model, key)
-        if obj:
-            setattr(obj, field, value)
-            self._session.commit()
-
-    def delete(self, key: int) -> None:
-        """
-        Deletes object from database table by integer key.
-        :param key: integer (PK)
-        """
-        obj = self._session.get(self._model, key)
-        if obj:
-            self._session.delete(obj)
-            try:
+        try:
+            obj = self.find_by_id(id) # Використовуємо self.find_by_id
+            if obj:
+                # Оновлюємо тільки ті поля, які є в 'data'
+                for key, value in data.items():
+                    if hasattr(obj, key):
+                        setattr(obj, key, value)
                 self._session.commit()
-            except Exception:
-                self._session.rollback()
-                raise
+                self._session.refresh(obj)
+                return obj # <-- ПОВЕРТАЄМО ОБ'ЄКТ
+            
+            return None # <-- ПОВЕРТАЄМО None, ЯКЩО НЕ ЗНАЙШЛИ
+        except Exception as e:
+            self._session.rollback()
+            print(f"Помилка при оновленні об'єкта: {e}")
+            raise e
 
-    def delete_all(self) -> None:
+    def delete(self, id: int):
         """
-        Deletes all objects from database table.
+        Видаляє об'єкт за ID.
+        ПОВЕРТАЄ True або False.
         """
-        self._session.query(self._model).delete()
-        self._session.commit()
+        try:
+            obj = self.find_by_id(id) # Використовуємо self.find_by_id
+            if obj:
+                self._session.delete(obj)
+                self._session.commit()
+                return True # <-- ПОВЕРТАЄМО TRUE
+            
+            return False # <-- ПОВЕРТАЄМО FALSE, ЯКЩО НЕ ЗНАЙШЛИ
+        except Exception as e:
+            self._session.rollback()
+            print(f"Помилка при видаленні об'єкта: {e}")
+            raise e

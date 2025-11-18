@@ -1,5 +1,6 @@
 # services/label_service.py
 from dao.label_dao import LabelDAO
+from domain.label import Label # <-- Імпортуємо модель
 
 class LabelService:
     """
@@ -18,7 +19,10 @@ class LabelService:
     def create_label(self, data: dict):
         if self.label_dao.find_by_name(data['name']):
             raise ValueError(f"Лейбл з ім'ям '{data['name']}' вже існує.")
-        return self.label_dao.create(data)
+        
+        # Виправлення: Створюємо ОБ'ЄКТ Label
+        new_label_obj = Label(**data)
+        return self.label_dao.create(new_label_obj)
 
     def update_label(self, label_id: int, data: dict):
         return self.label_dao.update(label_id, data)

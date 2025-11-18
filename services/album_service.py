@@ -1,5 +1,6 @@
 # services/album_service.py
 from dao.album_dao import AlbumDAO
+from domain.album import Album # <-- Імпортуємо модель
 
 class AlbumService:
     """
@@ -16,7 +17,9 @@ class AlbumService:
         return self.album_dao.find_by_id(album_id)
 
     def create_album(self, data: dict):
-        return self.album_dao.create(data)
+        # Виправлення: Створюємо ОБ'ЄКТ Album
+        new_album_obj = Album(**data)
+        return self.album_dao.create(new_album_obj)
 
     def update_album(self, album_id: int, data: dict):
         return self.album_dao.update(album_id, data)

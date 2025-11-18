@@ -1,6 +1,7 @@
 # services/song_service.py
 from dao.song_dao import SongDAO
-from dao.artist_dao import ArtistDAO # Потрібен для M:M логіки
+from dao.artist_dao import ArtistDAO 
+from domain.song import Song # <-- Імпортуємо модель
 
 class SongService:
     """
@@ -9,8 +10,8 @@ class SongService:
     
     def __init__(self, session):
         self.song_dao = SongDAO(session)
-        self.artist_dao = ArtistDAO(session) # Для M:M
-        self._session = session # Потрібен для .commit()
+        self.artist_dao = ArtistDAO(session) # Потрібен для M:M логіки
+        self._session = session # Потрібен для .commit() у M:M
 
     def get_all_songs(self):
         return self.song_dao.find_all()
@@ -19,14 +20,14 @@ class SongService:
         return self.song_dao.find_by_id(song_id)
 
     def create_song(self, data: dict):
-        # **Приклад бізнес-логіки**
-        # Перевірка на унікальність (title + album_id)
         existing = self.song_dao.find_by_title(data['title'])
         for song in existing:
             if song.album_id == data.get('album_id'):
                 raise ValueError(f"Пісня '{data['title']}' вже існує в цьому альбомі.")
         
-        return self.song_dao.create(data)
+        # Виправлення: Створюємо ОБ'ЄКТ Song
+        new_song_obj = Song(**data)
+        return self.song_dao.create(new_song_obj)
 
     def update_song(self, song_id: int, data: dict):
         return self.song_dao.update(song_id, data)
@@ -42,8 +43,7 @@ class SongService:
     
     def add_artist_to_song(self, song_id: int, artist_id: int):
         """
-        (M:M) Додає артиста до пісні (змінює M:M таблицю).
-        Це і є бізнес-логіка!
+        (M:M) Додає артиста до пісні.
         """
         song = self.song_dao.find_by_id(song_id)
         artist = self.artist_dao.find_by_id(artist_id)

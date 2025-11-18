@@ -1,6 +1,7 @@
 # services/playlist_service.py
 from dao.playlist_dao import PlaylistDAO
-from dao.song_dao import SongDAO # Потрібен для M:M
+from dao.song_dao import SongDAO 
+from domain.playlist import Playlist # <-- Імпортуємо модель
 
 class PlaylistService:
     """
@@ -20,10 +21,12 @@ class PlaylistService:
 
     def create_playlist(self, data: dict):
         # 'user_id' і 'name' мають бути в 'data'
-        return self.playlist_dao.create(data)
+        
+        # Виправлення: Створюємо ОБ'ЄКТ Playlist
+        new_playlist_obj = Playlist(**data)
+        return self.playlist_dao.create(new_playlist_obj)
 
     def update_playlist(self, playlist_id: int, data: dict):
-        # Дозволяємо змінювати тільки назву
         if 'name' in data:
             return self.playlist_dao.update(playlist_id, {'name': data['name']})
         return self.playlist_dao.find_by_id(playlist_id)
